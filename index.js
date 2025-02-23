@@ -3,6 +3,7 @@ import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import dbConnect from "./db.js";
+import userRouter from "./routes/userRoute.js";
 
 const app = express();
 const port = process.env.PORT || 8000;
@@ -26,6 +27,8 @@ dbConnect();
 app.get("/", (req, res) => {
   res.send({ message: "Xventory backend" });
 });
+
+app.use("/api", userRouter);
 
 // Not found route
 app.use((req, res, next) => {
