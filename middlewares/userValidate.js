@@ -39,6 +39,23 @@ export const signupValidation = [
     .trim(),
 ];
 
+export const verifyValidation = [
+  check("email")
+    .not()
+    .isEmpty()
+    .withMessage("Email is required.")
+    .isEmail()
+    .withMessage("Enter valid email.")
+    .trim(),
+  check("otp")
+    .not()
+    .isEmpty()
+    .withMessage("Verification code is required.")
+    .isNumeric({ no_symbols: true })
+    .withMessage("Enter valid verification code.")
+    .trim(),
+];
+
 export const signinValidationCheck = (req, res, next) => {
   const errors = validationResult(req).mapped();
 
@@ -55,6 +72,21 @@ export const signinValidationCheck = (req, res, next) => {
 };
 
 export const signupValidationCheck = (req, res, next) => {
+  const errors = validationResult(req).mapped();
+
+  if (Object.keys(errors).length === 0) {
+    next();
+  } else {
+    const result = {};
+    Object.keys(errors).forEach((error) => {
+      result[error] = errors[error].msg;
+    });
+
+    res.status(400).send(result);
+  }
+};
+
+export const verifyValidationCheck = (req, res, next) => {
   const errors = validationResult(req).mapped();
 
   if (Object.keys(errors).length === 0) {
