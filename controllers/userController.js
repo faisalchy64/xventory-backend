@@ -102,3 +102,34 @@ export const verifyCode = async (req, res, next) => {
     next({ message: "User verification failed." });
   }
 };
+
+export const signout = async (req, res, next) => {
+  try {
+    const { refreshToken } = req.cookies;
+    const user = await User.findById(req.body._id);
+
+    if (user && user.refreshToken === refreshToken) {
+      user.refreshToken = "";
+      await user.save();
+
+      return res
+        .clearCookie("refreshToken", {
+          httpOnly: true,
+          secure: true,
+          sameSite: "strict",
+        })
+        .send({ status: 200, message: "Signout successful." });
+    }
+
+    res
+      .clearCookie("refreshToken", {
+        httpOnly: true,
+        secure: true,
+        sameSite: "strict",
+      })
+      .status(401)
+      .send({ status: 401, message: "Unauthorized user access." });
+  } catch (err) {
+    next({ message: "User signout failed." });
+  }
+};
