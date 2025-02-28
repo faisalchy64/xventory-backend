@@ -1,5 +1,15 @@
 import { check, validationResult } from "express-validator";
 
+export const emailValidation = [
+  check("email")
+    .not()
+    .isEmpty()
+    .withMessage("Email is required.")
+    .isEmail()
+    .withMessage("Enter valid email.")
+    .trim(),
+];
+
 export const signinValidation = [
   check("email")
     .not()
@@ -56,6 +66,47 @@ export const verifyValidation = [
     .trim(),
 ];
 
+export const resetPasswordValidation = [
+  check("email")
+    .not()
+    .isEmpty()
+    .withMessage("Email is required.")
+    .isEmail()
+    .withMessage("Enter valid email.")
+    .trim(),
+  check("otp")
+    .not()
+    .isEmpty()
+    .withMessage("Verification code is required.")
+    .isNumeric({ no_symbols: true })
+    .withMessage("Enter valid verification code.")
+    .trim(),
+  check("password")
+    .not()
+    .isEmpty()
+    .withMessage("Password is required.")
+    .isStrongPassword({ minLength: 8, minUppercase: 0 })
+    .withMessage(
+      "Minimum 8 characters needed (at least one letter, one digit and one special character)."
+    )
+    .trim(),
+];
+
+export const emailValidationCheck = (req, res, next) => {
+  const errors = validationResult(req).mapped();
+
+  if (Object.keys(errors).length === 0) {
+    next();
+  } else {
+    const result = {};
+    Object.keys(errors).forEach((error) => {
+      result[error] = errors[error].msg;
+    });
+
+    res.status(400).send(result);
+  }
+};
+
 export const signinValidationCheck = (req, res, next) => {
   const errors = validationResult(req).mapped();
 
@@ -87,6 +138,21 @@ export const signupValidationCheck = (req, res, next) => {
 };
 
 export const verifyValidationCheck = (req, res, next) => {
+  const errors = validationResult(req).mapped();
+
+  if (Object.keys(errors).length === 0) {
+    next();
+  } else {
+    const result = {};
+    Object.keys(errors).forEach((error) => {
+      result[error] = errors[error].msg;
+    });
+
+    res.status(400).send(result);
+  }
+};
+
+export const resetPasswordValidationCheck = (req, res, next) => {
   const errors = validationResult(req).mapped();
 
   if (Object.keys(errors).length === 0) {

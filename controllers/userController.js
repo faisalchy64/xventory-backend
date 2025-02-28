@@ -1,7 +1,7 @@
 import bcrypt from "bcrypt";
 import User from "../models/userModel.js";
 import generateOTP from "../utils/generateOTP.js";
-import { sendVerifyEmail } from "../utils/sendEmail.js";
+import { sendVerifyEmail, sendResetPasswordEmail } from "../utils/sendEmail.js";
 import { generateTokens } from "../utils/token.js";
 
 export const signin = async (req, res, next) => {
@@ -63,7 +63,8 @@ export const signup = async (req, res, next) => {
 
       if (user) {
         await sendVerifyEmail(email, otp);
-        res
+
+        return res
           .status(201)
           .send({ status: 201, message: "Account verification email sent." });
       }
@@ -91,13 +92,14 @@ export const verifyCode = async (req, res, next) => {
       user.otp = "";
       user.otpExpiry = 0;
       await user.save();
+
       return res.send({
         status: 200,
         message: "User verification successful.",
       });
     }
 
-    return next({ status: 400, message: "Invalid verification code." });
+    next({ status: 400, message: "Invalid verification code." });
   } catch (error) {
     next({ message: "User verification failed." });
   }
@@ -106,7 +108,8 @@ export const verifyCode = async (req, res, next) => {
 export const signout = async (req, res, next) => {
   try {
     const { refreshToken } = req.cookies;
-    const user = await User.findById(req.body._id);
+    const { email } = req.body;
+    const user = await User.findOne({ email });
 
     if (user && user.refreshToken === refreshToken) {
       user.refreshToken = "";
@@ -131,5 +134,59 @@ export const signout = async (req, res, next) => {
       .send({ status: 401, message: "Unauthorized user access." });
   } catch (err) {
     next({ message: "User signout failed." });
+  }
+};
+
+export const forgotPassword = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+
+    if (user === null) {
+      return next({ status: 404, message: "User not found." });
+    }
+
+    const otp = generateOTP();
+    const otpExpiry = Date.now() + 900000;
+    user.otp = otp;
+    user.otpExpiry = otpExpiry;
+    await user.save();
+    await sendResetPasswordEmail(email, otp);
+
+    res.send({ status: 200, message: "Reset password email sent." });
+  } catch (err) {
+    next({ message: "Reset password request failed." });
+  }
+};
+
+export const resetPassword = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+
+    if (user === null) {
+      return next({ status: 404, message: "User not found." });
+    }
+
+    if (user.otp === req.body.otp && user.otpExpiry < Date.now()) {
+      return next({ status: 400, message: "Verification code expired." });
+    }
+
+    if (user.otp === req.body.otp && user.otpExpiry > Date.now()) {
+      const password = await bcrypt.hash(req.body.password, 10);
+      user.password = password;
+      user.otp = "";
+      user.otpExpiry = 0;
+      await user.save();
+
+      return res.send({
+        status: 200,
+        message: "Password reset successful.",
+      });
+    }
+
+    next({ status: 400, message: "Invalid verification code." });
+  } catch (error) {
+    next({ message: "Password reset request failed." });
   }
 };
