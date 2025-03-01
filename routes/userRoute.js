@@ -18,6 +18,7 @@ import {
   signout,
   forgotPassword,
   resetPassword,
+  refreshAccessToken,
 } from "../controllers/userController.js";
 
 const userRouter = express.Router();
@@ -43,5 +44,7 @@ userRouter.patch(
   resetPasswordValidationCheck,
   resetPassword
 );
+
+userRouter.get("/refresh-token", refreshAccessToken);
 
 export default userRouter;

@@ -2,7 +2,14 @@ import bcrypt from "bcrypt";
 import User from "../models/userModel.js";
 import generateOTP from "../utils/generateOTP.js";
 import { sendVerifyEmail, sendResetPasswordEmail } from "../utils/sendEmail.js";
-import { generateTokens } from "../utils/token.js";
+import { generateTokens, verifyToken } from "../utils/token.js";
+
+const options = {
+  httpOnly: true,
+  secure: true,
+  sameSite: "strict",
+  maxAge: 7 * 24 * 60 * 60 * 1000,
+};
 
 export const signin = async (req, res, next) => {
   try {
@@ -27,16 +34,10 @@ export const signin = async (req, res, next) => {
       user.refreshToken = refreshToken;
       await user.save();
 
-      return res
-        .cookie("refreshToken", refreshToken, {
-          httpOnly: true,
-          secure: true,
-          sameSite: "strict",
-        })
-        .send({
-          status: 200,
-          data: { _id, name, email, isVerified, accessToken },
-        });
+      return res.cookie("refreshToken", refreshToken, options).send({
+        status: 200,
+        data: { _id, name, email, isVerified, accessToken },
+      });
     }
 
     next({ status: 401, message: "Incorrect email or password." });
@@ -116,11 +117,7 @@ export const signout = async (req, res, next) => {
       await user.save();
 
       return res
-        .clearCookie("refreshToken", {
-          httpOnly: true,
-          secure: true,
-          sameSite: "strict",
-        })
+        .clearCookie("refreshToken", options)
         .send({ status: 200, message: "Signout successful." });
     }
 
@@ -188,5 +185,48 @@ export const resetPassword = async (req, res, next) => {
     next({ status: 400, message: "Invalid verification code." });
   } catch (error) {
     next({ message: "Password reset request failed." });
+  }
+};
+
+export const refreshAccessToken = async (req, res, next) => {
+  try {
+    const { refreshToken } = req.cookies;
+
+    if (refreshToken === undefined) {
+      return next({ status: 401, message: "Unauthorized user access." });
+    }
+
+    const user = await User.findOne({ refreshToken }).select(
+      "name email isVerified refreshToken"
+    );
+
+    if (user && user.refreshToken === refreshToken) {
+      console.log("Hello", user.refreshToken, refreshToken);
+      const decoded = verifyToken(refreshToken);
+
+      if (decoded === null) {
+        return next({ status: 401, message: "Unauthorized user access." });
+      }
+
+      if (decoded) {
+        const { _id, name, email, isVerified } = user;
+        const { accessToken, refreshToken } = generateTokens({
+          _id,
+          name,
+          email,
+          isVerified,
+        });
+
+        user.refreshToken = refreshToken;
+        await user.save();
+
+        return res.cookie("refreshToken", refreshToken, options).send({
+          status: 200,
+          data: { _id, name, email, isVerified, accessToken },
+        });
+      }
+    }
+  } catch (err) {
+    next({ message: "Refresh token request failed." });
   }
 };
