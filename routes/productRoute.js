@@ -9,6 +9,7 @@ import {
 import {
   getProducts,
   getProduct,
+  manageProducts,
   createProduct,
   updateProduct,
   deleteProduct,
@@ -20,6 +21,8 @@ const productRouter = express.Router();
 productRouter.get("/products", getProducts);
 
 productRouter.get("/products/:id", getProduct);
+
+productRouter.get("/manage-products/:seller", verifyJWT, manageProducts);
 
 productRouter.post(
   "/products",

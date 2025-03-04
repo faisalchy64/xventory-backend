@@ -8,7 +8,6 @@ const options = {
   httpOnly: true,
   secure: true,
   sameSite: "strict",
-  maxAge: 7 * 24 * 60 * 60 * 1000,
 };
 
 export const signin = async (req, res, next) => {
@@ -201,11 +200,13 @@ export const refreshAccessToken = async (req, res, next) => {
     );
 
     if (user && user.refreshToken === refreshToken) {
-      console.log("Hello", user.refreshToken, refreshToken);
       const decoded = verifyToken(refreshToken);
 
       if (decoded === null) {
-        return next({ status: 401, message: "Unauthorized user access." });
+        return res.clearCookie("refreshToken", options).status(401).send({
+          status: 401,
+          message: "Session expired, sign in again.",
+        });
       }
 
       if (decoded) {

@@ -26,18 +26,41 @@ export const getProduct = async (req, res, next) => {
   }
 };
 
+export const manageProducts = async (req, res, next) => {
+  try {
+    const { seller } = req.params;
+
+    if (req.decoded._id === seller) {
+      const { page } = req.query;
+      const skip = page > 1 ? (page - 1) * 6 : 0;
+
+      const products = await Product.find({ seller }).limit(6).skip(skip);
+      const total = await Product.countDocuments({ seller });
+
+      return res.send({ status: 200, data: { products, total } });
+    }
+
+    next({ status: 403, message: "Forbidden user access." });
+  } catch (err) {
+    next({ message: "Fetch products request failed." });
+  }
+};
+
 export const createProduct = async (req, res, next) => {
   try {
     if (req.decoded._id === req.body.seller) {
       req.body.image = await uploadImage(req.file.path);
       const product = await Product.create({ ...req.body });
 
-      return res.status(201).send({ status: 201, data: { ...product._doc } });
+      if (product) {
+        return res
+          .status(201)
+          .send({ status: 201, message: "Product created successfully." });
+      }
     }
 
     next({ status: 403, message: "Forbidden user access." });
   } catch (err) {
-    console.log(err.message);
     next({ message: "Create product request failed." });
   }
 };

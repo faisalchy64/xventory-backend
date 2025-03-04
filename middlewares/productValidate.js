@@ -36,7 +36,7 @@ export const productValidation = [
     .not()
     .isEmpty()
     .withMessage("Price is required.")
-    .isNumeric({ no_symbols: true })
+    .isFloat()
     .withMessage("Price should contain only numbers.")
     .trim(),
   check("quantity")
@@ -78,7 +78,7 @@ export const productUpdateValidation = [
     .trim(),
   check("price")
     .optional()
-    .isNumeric({ no_symbols: true })
+    .isFloat()
     .withMessage("Price should contain only numbers.")
     .trim(),
   check("quantity")
