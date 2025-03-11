@@ -1,8 +1,10 @@
+import { randomBytes } from "crypto";
 import bcrypt from "bcrypt";
 import User from "../models/userModel.js";
 import generateOTP from "../utils/generateOTP.js";
 import { sendVerifyEmail, sendResetPasswordEmail } from "../utils/sendEmail.js";
 import { generateTokens, verifyToken } from "../utils/token.js";
+import admin from "../firebase.js";
 
 const options = {
   httpOnly: true,
@@ -42,6 +44,54 @@ export const signin = async (req, res, next) => {
     next({ status: 401, message: "Incorrect email or password." });
   } catch (error) {
     next({ message: "User signin failed." });
+  }
+};
+
+export const withGoogle = async (req, res, next) => {
+  try {
+    const { token } = req.body;
+    const decoded = await admin.auth().verifyIdToken(token);
+
+    const { name, email, email_verified } = decoded;
+    const payload = {};
+
+    const is_user = await User.findOne({ email });
+
+    if (is_user === null) {
+      payload.name = name;
+      payload.email = email;
+      payload.password = randomBytes(32).toString("hex");
+      payload.isVerified = email_verified;
+    }
+
+    const user = await User.findOneAndUpdate(
+      { email },
+      { ...payload },
+      { new: true, upsert: true }
+    );
+
+    if (user) {
+      const { _id, name, email, isVerified } = user;
+      const { accessToken, refreshToken } = generateTokens({
+        _id,
+        name,
+        email,
+        isVerified,
+      });
+
+      user.refreshToken = refreshToken;
+      await user.save();
+
+      return res.cookie("refreshToken", refreshToken, options).send({
+        status: 200,
+        data: { _id, name, email, isVerified, accessToken },
+      });
+    }
+
+    next({ status: 400, message: "Token verification failed." });
+  } catch (error) {
+    console.log(error.message);
+    next({ message: "User signin with google failed." });
   }
 };
 

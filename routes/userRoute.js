@@ -13,6 +13,7 @@ import {
 } from "../middlewares/userValidate.js";
 import {
   signin,
+  withGoogle,
   signup,
   verifyCode,
   signout,
@@ -24,6 +25,8 @@ import {
 const userRouter = express.Router();
 
 userRouter.post("/signin", signinValidation, signinValidationCheck, signin);
+
+userRouter.post("/google", withGoogle);
 
 userRouter.post("/signup", signupValidation, signupValidationCheck, signup);
 
