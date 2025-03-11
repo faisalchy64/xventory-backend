@@ -3,11 +3,17 @@ import { uploadImage, destroyImage } from "../utils/cloudinary.js";
 
 export const getProducts = async (req, res, next) => {
   try {
-    const { page } = req.query;
+    const { search, page } = req.query;
     const skip = page > 1 ? (page - 1) * 6 : 0;
 
-    const products = await Product.find({}).limit(6).skip(skip);
-    const total = await Product.countDocuments();
+    const products = await Product.find({
+      name: { $regex: search, $options: "i" },
+    })
+      .limit(6)
+      .skip(skip);
+    const total = await Product.countDocuments({
+      name: { $regex: search, $options: "i" },
+    });
 
     res.send({ status: 200, data: { products, total } });
   } catch (err) {
@@ -18,7 +24,7 @@ export const getProducts = async (req, res, next) => {
 export const getProduct = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const product = await Product.findById(id);
+    const product = await Product.findById(id).populate("seller", "name");
 
     res.send({ status: 200, data: { ...product._doc } });
   } catch (err) {

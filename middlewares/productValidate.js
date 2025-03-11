@@ -71,10 +71,13 @@ export const productUpdateValidation = [
     }),
   check("description")
     .optional()
+    .not()
+    .isEmpty()
+    .withMessage("Description is required.")
     .isLength({ min: 3 })
     .withMessage("Minimum 3 characters needed.")
-    .isAlpha("en-US", { ignore: " -." })
-    .withMessage("Description should contain only alphabets.")
+    .matches(/^(?!\s)([a-zA-Z0-9.,'"\-:;()&%$#!? ]{10,500})$/)
+    .withMessage("Enter valid description.")
     .trim(),
   check("price")
     .optional()

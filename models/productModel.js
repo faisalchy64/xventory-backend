@@ -30,6 +30,10 @@ const productSchema = new mongoose.Schema(
       type: Number,
       required: [true, "Quantity is required."],
     },
+    sold: {
+      type: Number,
+      default: 0,
+    },
     unit: {
       type: String,
       required: [true, "Unit is required."],
