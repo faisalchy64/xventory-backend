@@ -1,4 +1,5 @@
 import express from "express";
+import verifyJWT from "../middlewares/verifyJWT.js";
 import upload from "../middlewares/upload.js";
 import {
   productValidation,
@@ -14,7 +15,6 @@ import {
   updateProduct,
   deleteProduct,
 } from "../controllers/productController.js";
-import verifyJWT from "../middlewares/verifyJWT.js";
 
 const productRouter = express.Router();
 

@@ -50,7 +50,13 @@ export const productValidation = [
     .isIn(["kg", "dz", "pc"])
     .withMessage("Only kg, dz and pc units are allowed.")
     .trim(),
-  check("seller").not().isEmpty().withMessage("Id is required.").trim(),
+  check("seller")
+    .not()
+    .isEmpty()
+    .withMessage("Id is required.")
+    .isMongoId()
+    .withMessage("Enter valid id.")
+    .trim(),
 ];
 
 export const productUpdateValidation = [

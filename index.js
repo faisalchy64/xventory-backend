@@ -5,9 +5,14 @@ import cookieParser from "cookie-parser";
 import dbConnect from "./db.js";
 import userRouter from "./routes/userRoute.js";
 import productRouter from "./routes/productRoute.js";
+import orderRouter from "./routes/orderRoute.js";
+import { webhook } from "./controllers/orderController.js";
 
 const app = express();
 const port = process.env.PORT || 8000;
+
+// Stripe webhook endpoint
+app.post("/api/webhook", express.raw({ type: "application/json" }), webhook);
 
 // Middlewares
 app.use(express.json({ limit: "16kb" }));
@@ -32,6 +37,8 @@ app.get("/", (req, res) => {
 app.use("/api", userRouter);
 
 app.use("/api", productRouter);
+
+app.use("/api", orderRouter);
 
 // Not found route
 app.use((req, res, next) => {
