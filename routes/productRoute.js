@@ -22,7 +22,7 @@ productRouter.get("/products", getProducts);
 
 productRouter.get("/products/:id", getProduct);
 
-productRouter.get("/manage-products/:seller", verifyJWT, manageProducts);
+productRouter.get("/manage-products", verifyJWT, manageProducts);
 
 productRouter.post(
   "/products",

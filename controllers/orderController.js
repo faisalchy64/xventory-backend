@@ -7,15 +7,17 @@ export const getOrders = async (req, res, next) => {
     const { seller, page } = req.query;
     const skip = page > 1 ? (page - 1) * 6 : 0;
 
-    if (req.decoded._id === seller) {
-      const orders = await Order.find({ "products.seller": { $eq: seller } })
+    if (req.decoded._id === seller || req.decoded.isAdmin) {
+      const query = req.decoded.isAdmin
+        ? {}
+        : { "products.seller": { $eq: seller } };
+      const orders = await Order.find(query)
         .populate("products.product", "name image")
+        .populate("products.seller", "name email")
         .populate("customer", "name email")
         .limit(6)
         .skip(skip);
-      const total = await Order.countDocuments({
-        "products.seller": { $eq: seller },
-      });
+      const total = await Order.countDocuments(query);
 
       return res.send({ status: 200, data: { orders, total } });
     }
@@ -79,7 +81,10 @@ export const updateOrder = async (req, res, next) => {
     const { id } = req.params;
     const { products } = await Order.findById(id);
 
-    if (req.decoded._id === products[0].seller.toString()) {
+    if (
+      req.decoded._id === products[0].seller.toString() ||
+      req.decoded.isAdmin
+    ) {
       const order = await Order.findByIdAndUpdate(
         id,
         { ...req.body },

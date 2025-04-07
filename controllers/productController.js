@@ -34,14 +34,13 @@ export const getProduct = async (req, res, next) => {
 
 export const manageProducts = async (req, res, next) => {
   try {
-    const { seller } = req.params;
+    const { seller, page } = req.query;
 
-    if (req.decoded._id === seller) {
-      const { page } = req.query;
+    if (req.decoded._id === seller || req.decoded.isAdmin) {
+      const query = req.decoded.isAdmin ? {} : { seller };
       const skip = page > 1 ? (page - 1) * 6 : 0;
-
-      const products = await Product.find({ seller }).limit(6).skip(skip);
-      const total = await Product.countDocuments({ seller });
+      const products = await Product.find(query).limit(6).skip(skip);
+      const total = await Product.countDocuments(query);
 
       return res.send({ status: 200, data: { products, total } });
     }
@@ -76,7 +75,7 @@ export const updateProduct = async (req, res, next) => {
     const { id } = req.params;
     const { image, seller } = await Product.findById(id);
 
-    if (req.decoded._id === seller.toString()) {
+    if (req.decoded._id === seller.toString() || req.decoded.isAdmin) {
       if (req.file) {
         await destroyImage(image.public_id);
         const { optimize_url, public_id } = await uploadImage(req.file.path);
@@ -104,7 +103,7 @@ export const deleteProduct = async (req, res, next) => {
     const { id } = req.params;
     const { image, seller } = await Product.findById(id);
 
-    if (req.decoded._id === seller.toString()) {
+    if (req.decoded._id === seller.toString() || req.decoded.isAdmin) {
       await destroyImage(image.public_id);
       const product = await Product.findByIdAndDelete(id);
 

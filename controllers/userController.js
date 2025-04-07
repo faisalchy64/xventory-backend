@@ -24,12 +24,13 @@ export const signin = async (req, res, next) => {
     const compare = await bcrypt.compare(password, user.password);
 
     if (compare) {
-      const { _id, name, email, isVerified } = user;
+      const { _id, name, email, isVerified, isAdmin, address } = user;
       const { accessToken, refreshToken } = generateTokens({
         _id,
         name,
         email,
         isVerified,
+        isAdmin,
       });
 
       user.refreshToken = refreshToken;
@@ -37,7 +38,7 @@ export const signin = async (req, res, next) => {
 
       return res.cookie("refreshToken", refreshToken, options).send({
         status: 200,
-        data: { _id, name, email, isVerified, accessToken },
+        data: { _id, name, email, isVerified, isAdmin, address, accessToken },
       });
     }
 
@@ -54,7 +55,6 @@ export const withGoogle = async (req, res, next) => {
 
     const { name, email, email_verified } = decoded;
     const payload = {};
-
     const is_user = await User.findOne({ email });
 
     if (is_user === null) {
@@ -71,12 +71,13 @@ export const withGoogle = async (req, res, next) => {
     );
 
     if (user) {
-      const { _id, name, email, isVerified } = user;
+      const { _id, name, email, isVerified, isAdmin, address } = user;
       const { accessToken, refreshToken } = generateTokens({
         _id,
         name,
         email,
         isVerified,
+        isAdmin,
       });
 
       user.refreshToken = refreshToken;
@@ -84,7 +85,7 @@ export const withGoogle = async (req, res, next) => {
 
       return res.cookie("refreshToken", refreshToken, options).send({
         status: 200,
-        data: { _id, name, email, isVerified, accessToken },
+        data: { _id, name, email, isVerified, isAdmin, address, accessToken },
       });
     }
 
@@ -246,7 +247,7 @@ export const refreshAccessToken = async (req, res, next) => {
     }
 
     const user = await User.findOne({ refreshToken }).select(
-      "name email isVerified refreshToken"
+      "name email isVerified isAdmin refreshToken"
     );
 
     if (user && user.refreshToken === refreshToken) {
@@ -260,12 +261,13 @@ export const refreshAccessToken = async (req, res, next) => {
       }
 
       if (decoded) {
-        const { _id, name, email, isVerified } = user;
+        const { _id, name, email, isVerified, isAdmin } = user;
         const { accessToken, refreshToken } = generateTokens({
           _id,
           name,
           email,
           isVerified,
+          isAdmin,
         });
 
         user.refreshToken = refreshToken;
@@ -273,11 +275,77 @@ export const refreshAccessToken = async (req, res, next) => {
 
         return res.cookie("refreshToken", refreshToken, options).send({
           status: 200,
-          data: { _id, name, email, isVerified, accessToken },
+          data: { _id, name, email, isVerified, isAdmin, accessToken },
         });
       }
     }
   } catch (err) {
     next({ message: "Refresh token request failed." });
+  }
+};
+
+export const manageUsers = async (req, res, next) => {
+  try {
+    const { page } = req.query;
+
+    if (req.decoded.isAdmin) {
+      const skip = page > 1 ? (page - 1) * 6 : 0;
+      const users = await User.find({
+        _id: {
+          $nin: [req.decoded._id],
+        },
+      })
+        .select("name email isVerified isAdmin")
+        .limit(6)
+        .skip(skip);
+      const total = await User.countDocuments({
+        _id: {
+          $nin: [req.decoded._id],
+        },
+      });
+
+      return res.send({ status: 200, data: { users, total } });
+    }
+
+    next({ status: 403, message: "Forbidden user access." });
+  } catch (err) {
+    next({ message: "Manage users request failed." });
+  }
+};
+
+export const deleteUser = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    if (req.decoded.isAdmin) {
+      const user = await User.findByIdAndDelete(id);
+
+      return res.send({ status: 200, data: { ...user._doc } });
+    }
+
+    next({ status: 403, message: "Forbidden user access." });
+  } catch (err) {
+    next({ message: "Delete user request failed." });
+  }
+};
+
+export const updateProfile = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { name, address } = req.body;
+
+    if (req.decoded._id === id) {
+      const user = await User.findByIdAndUpdate(
+        id,
+        { name, address },
+        { new: true }
+      ).select("name address");
+
+      return res.send({ status: 200, data: { ...user._doc } });
+    }
+
+    next({ status: 403, message: "Forbidden user access." });
+  } catch (err) {
+    next({ message: "Profile update request failed." });
   }
 };

@@ -1,4 +1,5 @@
 import express from "express";
+import verifyJWT from "../middlewares/verifyJWT.js";
 import {
   emailValidation,
   signinValidation,
@@ -20,6 +21,9 @@ import {
   forgotPassword,
   resetPassword,
   refreshAccessToken,
+  manageUsers,
+  deleteUser,
+  updateProfile,
 } from "../controllers/userController.js";
 
 const userRouter = express.Router();
@@ -49,5 +53,11 @@ userRouter.patch(
 );
 
 userRouter.get("/refresh-token", refreshAccessToken);
+
+userRouter.get("/manage-users", verifyJWT, manageUsers);
+
+userRouter.delete("/manage-users/:id", verifyJWT, deleteUser);
+
+userRouter.patch("/profile/:id", verifyJWT, updateProfile);
 
 export default userRouter;
