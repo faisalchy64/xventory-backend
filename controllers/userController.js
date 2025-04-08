@@ -9,7 +9,7 @@ import admin from "../firebase.js";
 const options = {
   httpOnly: true,
   secure: true,
-  sameSite: "strict",
+  sameSite: "none",
 };
 
 export const signin = async (req, res, next) => {
@@ -172,11 +172,7 @@ export const signout = async (req, res, next) => {
     }
 
     res
-      .clearCookie("refreshToken", {
-        httpOnly: true,
-        secure: true,
-        sameSite: "strict",
-      })
+      .clearCookie("refreshToken", options)
       .status(401)
       .send({ status: 401, message: "Unauthorized user access." });
   } catch (err) {
