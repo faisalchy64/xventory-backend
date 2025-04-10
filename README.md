@@ -6,7 +6,7 @@ A full-stack inventory management platform designed for businesses to efficientl
 
 ## 🔗 Links
 
-- [Website](https://katherineoelsner.com/)
+- [Website](https://xventory.vercel.app)
 - [Frontend Repository](https://github.com/faisalchy64/xventory-frontend)
 
 ### Key Features & Functionalities:
