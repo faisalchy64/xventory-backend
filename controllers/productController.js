@@ -3,17 +3,42 @@ import { uploadImage, destroyImage } from "../utils/cloudinary.js";
 
 export const getProducts = async (req, res, next) => {
   try {
-    const { search, page } = req.query;
-    const skip = page > 1 ? (page - 1) * 6 : 0;
-
-    const products = await Product.find({
-      name: { $regex: search, $options: "i" },
-    })
-      .limit(6)
-      .skip(skip);
-    const total = await Product.countDocuments({
-      name: { $regex: search, $options: "i" },
-    });
+    const { search = "", page = 1 } = req.query;
+    const limit = 6;
+    const skip = page > 1 ? (page - 1) * limit : 0;
+    const result = await Product.aggregate([
+      {
+        $match: {
+          name: {
+            $regex: search,
+            $options: "i",
+          },
+        },
+      },
+      {
+        $facet: {
+          products: [
+            { $sort: { createdAt: -1 } },
+            { $skip: skip },
+            { $limit: limit },
+          ],
+          total: [{ $count: "count" }],
+        },
+      },
+      {
+        $unwind: {
+          path: "$total",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $project: {
+          products: 1,
+          total: { $ifNull: ["$total.count", 0] },
+        },
+      },
+    ]);
+    const { products, total } = result[0] || { products: [], total: 0 };
 
     res.send({ status: 200, data: { products, total } });
   } catch (err) {
@@ -34,13 +59,40 @@ export const getProduct = async (req, res, next) => {
 
 export const manageProducts = async (req, res, next) => {
   try {
-    const { seller, page } = req.query;
+    const { seller = "", page = 1 } = req.query;
 
     if (req.decoded._id === seller || req.decoded.isAdmin) {
       const query = req.decoded.isAdmin ? {} : { seller };
-      const skip = page > 1 ? (page - 1) * 6 : 0;
-      const products = await Product.find(query).limit(6).skip(skip);
-      const total = await Product.countDocuments(query);
+      const limit = 6;
+      const skip = page > 1 ? (page - 1) * limit : 0;
+      const result = await Product.aggregate([
+        {
+          $match: query,
+        },
+        {
+          $facet: {
+            products: [
+              { $sort: { createdAt: -1 } },
+              { $skip: skip },
+              { $limit: limit },
+            ],
+            total: [{ $count: "count" }],
+          },
+        },
+        {
+          $unwind: {
+            path: "$total",
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+        {
+          $project: {
+            products: 1,
+            total: { $ifNull: ["$total.count", 0] },
+          },
+        },
+      ]);
+      const { products, total } = result[0] || { products: [], total: 0 };
 
       return res.send({ status: 200, data: { products, total } });
     }
