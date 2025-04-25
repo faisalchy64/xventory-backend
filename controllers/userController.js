@@ -285,20 +285,36 @@ export const manageUsers = async (req, res, next) => {
     const { page } = req.query;
 
     if (req.decoded.isAdmin) {
-      const skip = page > 1 ? (page - 1) * 6 : 0;
-      const users = await User.find({
-        _id: {
-          $nin: [req.decoded._id],
+      const limit = 6;
+      const skip = page > 1 ? (page - 1) * limit : 0;
+      const result = await User.aggregate([
+        {
+          $match: { _id: { $nin: [req.decoded._id] } },
         },
-      })
-        .select("name email isVerified isAdmin")
-        .limit(6)
-        .skip(skip);
-      const total = await User.countDocuments({
-        _id: {
-          $nin: [req.decoded._id],
+        {
+          $facet: {
+            users: [
+              { $sort: { createdAt: -1 } },
+              { $skip: skip },
+              { $limit: limit },
+            ],
+            total: [{ $count: "count" }],
+          },
         },
-      });
+        {
+          $unwind: {
+            path: "$total",
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+        {
+          $project: {
+            users: 1,
+            total: { $ifNull: ["$total.count", 0] },
+          },
+        },
+      ]);
+      const { users, total } = result[0] || { users: [], total: 0 };
 
       return res.send({ status: 200, data: { users, total } });
     }
